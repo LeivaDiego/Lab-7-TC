@@ -1,4 +1,5 @@
 import re
+from itertools import combinations
 
 # Clase que representa una gramatica
 class Gramatica:
@@ -29,14 +30,13 @@ class Gramatica:
         for cuerpo in cuerpos:
             cuerpo = cuerpo.strip()
             if not re.match(r"^[A-Za-z0-9]+|ε$", cuerpo):
-                return False, f"La produccion'{cuerpo}' no es valida"
+                return False, f"La produccion '{cuerpo}' no es valida"
         
         return True, ""
 
     # carga la producciones de una gramatica de un archivo
     def load_grammar(self, archivo):
         valid = True
-        msg = ""
         gramatica = []
 
         with open(archivo, 'r', encoding='utf-8') as f:
@@ -63,3 +63,100 @@ class Gramatica:
         else:
             print("no es valida\n")
             self.correcta = False
+
+
+    # Identificar simbolos anulables
+    def find_nullables(self):
+        print("\n--- Comenzando el proceso para identificar simbolos anulables ---")
+        anulables = set()
+        cambios = True
+
+        while cambios:
+            print("\nRealizando una iteracion para encontrar mas simbolos anulables")
+            cambios = False
+
+            for cabeza, cuerpos in self.producciones.items():
+                for cuerpo in cuerpos:
+                    print(f"\n Evaluando la produccion: {cabeza} -> {cuerpo}")
+
+                    # Si el cuerpo es ε o todos sus simbolos son anulables y son no terminales
+                    if cuerpo == "ε":
+                        print("El cuerpo es ε")
+                        if cabeza not in anulables:
+                            print(f"Añadiendo {cabeza} a los simbolos anulables")
+                            anulables.add(cabeza)
+                            cambios = True
+                        else:
+                            print(f"{cabeza} ya esta en los simbolos anulables")
+
+                    elif all([simbolo in anulables for simbolo in cuerpo if simbolo.isupper()]):
+                        print("Todos los simbolos del cuerpo son anulables")
+                        if cabeza not in anulables:
+                            print(f"Añadiendo {cabeza} a los simbolos anulables")
+                            anulables.add(cabeza)
+                            cambios = True
+                        else:
+                            print(f"{cabeza} ya esta en los simbolos anulables")
+                    else:
+                        print(f"El cuerpo no es ε y no todos sus simbolos son anulables")
+
+        print("\n--- Finalizando el proceso de identificacion de simbolos anulables ---")
+        return anulables
+
+
+    # Generar nuevas producciones considerando los simbolos anulables
+    def generate_non_epsilon_productions(self, anulables):
+        print("\n--- Comenzando el proceso para generar producciones sin ε ---")
+        nuevas_producciones = {}
+
+        for cabeza, cuerpos in self.producciones.items():
+            print(f"\nEvaluando las producciones para: {cabeza}")
+            nuevas_producciones[cabeza] = []
+
+            for cuerpo in cuerpos:
+                print(f" Evaluando el cuerpo: {cuerpo}")
+                # Si el cuerpo no es ε
+                if cuerpo != "ε":
+                    subconjuntos = [simbolo for simbolo in cuerpo if simbolo in anulables]
+                    print(f"Simbolos anulables en el cuerpo: {', '.join(subconjuntos)}")
+
+                    # Generar todas las combinaciones posibles de reemplazo
+                    print("Generando combinaciones para reemplazo")
+                    for i in range(len(subconjuntos) + 1):
+                        for combinacion in combinations(subconjuntos, i):
+                            print(f" Generando nuevo cuerpo para la combinacion {combinacion}")
+                            nuevo_cuerpo = ''.join([s for s in cuerpo if s not in combinacion])
+                            if nuevo_cuerpo:
+                                print(f"Nueva produccion generada: {cabeza} -> {nuevo_cuerpo}")
+                                nuevas_producciones[cabeza].append(nuevo_cuerpo)
+                else:
+                    print("El cuerpo es ε, no se toma en cuenta")
+
+            # Eliminar duplicados
+            print(f"Actualizando producciones para {cabeza} sin duplicados")
+            nuevas_producciones[cabeza] = list(set(nuevas_producciones[cabeza]))
+
+        print("\n--- Finalizando el proceso de generacion de producciones sin ε ---\n")
+        self.producciones = nuevas_producciones
+
+
+    # Remover producciones-ε de la gramatica
+    def remover_epsilon_productions(self):
+        if self.correcta:
+            print("Eliminando producciones-ε de la gramatica")
+        
+            # Paso 1: Encontrar simbolos anulables
+            anulables = self.find_nullables()
+            print(f"Simbolos anulables identificados: {', '.join(anulables)}\n")
+        
+            # Paso 2: Generar nuevas producciones sin ε
+            self.generate_non_epsilon_productions(anulables)
+            print("Nuevas producciones sin ε generadas:")
+            for cabeza, cuerpos in self.producciones.items():
+                print(f"{cabeza} -> {' | '.join(cuerpos)}")
+        
+            # Paso 3: Eliminar las producciones que derivan solo ε
+            # (Nota: Este paso ya esta integrado en el metodo generate_non_epsilon_productions)
+            print("\nLas producciones-ε de la gramatica han sido eliminadas\n") 
+        else:
+            print("\nNo se puede usar esta gramatica porque no es valida\n")
