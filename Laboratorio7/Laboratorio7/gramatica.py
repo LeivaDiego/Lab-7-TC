@@ -117,15 +117,15 @@ class Gramatica:
                 print(f" Evaluando el cuerpo: {cuerpo}")
                 # Si el cuerpo no es ε
                 if cuerpo != "ε":
-                    subconjuntos = [simbolo for simbolo in cuerpo if simbolo in anulables]
-                    print(f"Simbolos anulables en el cuerpo: {', '.join(subconjuntos)}")
+                    indices_anulables = [i for i, simbolo in enumerate(cuerpo) if simbolo in anulables]
+                    print(f"Indices de simbolos anulables en el cuerpo: {indices_anulables}")
 
                     # Generar todas las combinaciones posibles de reemplazo
                     print("Generando combinaciones para reemplazo")
-                    for i in range(len(subconjuntos) + 1):
-                        for combinacion in combinations(subconjuntos, i):
+                    for i in range(len(indices_anulables) + 1):
+                        for combinacion in combinations(indices_anulables, i):
                             print(f" Generando nuevo cuerpo para la combinacion {combinacion}")
-                            nuevo_cuerpo = ''.join([s for s in cuerpo if s not in combinacion])
+                            nuevo_cuerpo = ''.join([cuerpo[j] for j in range(len(cuerpo)) if j not in combinacion])
                             if nuevo_cuerpo:
                                 print(f"Nueva produccion generada: {cabeza} -> {nuevo_cuerpo}")
                                 nuevas_producciones[cabeza].append(nuevo_cuerpo)
@@ -138,6 +138,8 @@ class Gramatica:
 
         print("\n--- Finalizando el proceso de generacion de producciones sin ε ---\n")
         self.producciones = nuevas_producciones
+
+
 
 
     # Remover producciones-ε de la gramatica
